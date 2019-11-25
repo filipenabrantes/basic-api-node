@@ -9,50 +9,73 @@ const createUserToken = (userId) => {
     return jwt.sign({ id: createUserToken }, 'fna', { expiresIn: '7d'})
 }
 
-router.get('/', (req, res) => {
-    Users.find({}, (err, data) => {
-        if(err) return res.send({error: 'Erro na consulta de users'});
-        return res.send(data);
-    })
+router.get('/', async (req, res) => {
+
+    try {
+        const users = await Users.find({});
+        return res.send(users);
+        
+    } catch (err) {
+        return res.status(500).send({error: 'Erro na consulta de users'});
+    }
 })
 
 router.post('/create', async (req, res) => {
     const { email, password } = req.body;
 
-    if(!email || !password) return res.send({ error: 'Dados insuficientes' });
+    if(!email || !password) return res.status(400).send({ error: 'Dados insuficientes' });
 
     try {
-        if (await Users.findOne({ email })) return res.send({ error: 'Usuario já registrado' });
+        if (await Users.findOne({ email })) return res.status(400).send({ error: 'Usuario já registrado' });
 
         const user = await Users.create(req.body);
         user.password = undefined;
         
-        return res.send({ user, token: createUserToken(user.id)});
+        return res.status(201).send({ user, token: createUserToken(user.id)});
     }
     catch (err) {
-        if (err) return res.send({ error: 'Erro ao buscar usuário' });
+        if (err) return res.status(500).send({ error: 'Erro ao buscar usuário' });
     }
 })
 
 router.post('/auth', async (req, res) => {
     const { email, password } = req.body;
 
-    if (!email || !password) return res.send({ error: 'Dados insuficientes' });
+    if (!email || !password) return res.status(400).send({ error: 'Dados insuficientes' });
 
     try {
         const user = await Users.findOne({ email }).select('+password');
-        if (!user) return res.send({ error: 'Usuário não registrado' });
+        if (!user) return res.status(400).send({ error: 'Usuário não registrado' });
 
         const pass_ok = await bcrypt.compare(password, user.password);
 
-        if (!pass_ok) return res.send({ error: 'Erro ao autenticar usuário' });
+        if (!pass_ok) return res.status(401).send({ error: 'Erro ao autenticar usuário' });
 
         user.password = undefined;
         return res.send({ user, token: createUserToken(user.id) });
 
     } catch (err) {
-        return res.send({ error: 'Erro ao buscar usuário' });
+        return res.status(500).send({ error: 'Erro ao buscar usuário' });
     }
 });
 
 module.exports = router; 
+
+/*
+CÓDIGOS DE STATUS
+
+200 - OK
+201 - CREATED (qualquer registro)
+202 - Accepted (requisição aceita, mas não processou ainda)
+
+400 - Bad request
+401 - Unauthorized - AUTENTICAÇÃO, tem caráter temporário.
+403 - Forbidden - AUTORIZAÇÃO, tem caráter permanente.
+404 - Not found.
+
+500 - Internal server error
+501 - Not implemented - a API não suporta esa funcionalidade.
+503 - Service Unavailable - a API executa a operação, mas no momento está indisponível
+
+
+*/
