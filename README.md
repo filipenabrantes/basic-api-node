@@ -1,4 +1,5 @@
-# basic-api-node
+# Basic API with NodeJS
+
 **PT** - 
 * Projeto básico para desenvolvimento do aprendizado utilizando NodeJS, Express, Mongodb, JWT para geração de token e bcrypt para criptografia.
 
